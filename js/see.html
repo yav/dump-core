@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="jquery.js"></script>
+<script src="out.js"></script>
+<link href="https://fonts.googleapis.com/css?family=Fira+Mono" rel="stylesheet">
+<style>
+
+.clickable {
+  cursor: pointer;
+}
+
+body {
+  font-family: 'Fira Mono', monospace;
+}
+
+
+.active { background-color: orange; }
+.active-long { background-color: green; }
+
+.var {
+  display: inline-block;
+}
+
+.top.bind {
+  margin-bottom: 2em;
+}
+
+
+.app {
+  vertical-align: top;
+}
+
+.title {
+  font-size: large;
+  font-weight: bold;
+}
+
+.nested { padding-left: 1em; }
+
+
+
+.paren {
+  border: 1px solid black !important;
+  padding: 3px;
+}
+
+.arg {
+  display: inline-block;
+  margin-right: 0.5em;
+  white-space: nowrap;
+}
+
+.app-arg {
+  margin-left: 0.2em;
+}
+
+
+.lit {
+  color: purple;
+  display: inline-block;
+}
+
+.kw.lam {
+  margin-right: 0.1em;
+}
+
+.kw {
+  display: inline-block;
+  font-weight: bold;
+  margin-right: 0.5em;
+}
+
+.expr:hover {
+  border-left: 1px solid black;
+}
+
+.expr {
+  border-left: 1px solid transparent;
+  margin-right: 0.5em;
+}
+
+.small.expr {
+  display: inline-block;
+}
+
+table.details {
+  border-collapse: collapse;
+}
+
+table.details td {
+  border-left: 1px solid white;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
+
+#all-details {
+  z-index: 5;
+  position: fixed;
+  right: 1em;
+  top: 1em;
+}
+
+#details-long {
+  border: 2px solid green;
+  background-color: rgba(0,0,0,0.8);
+  color: white;
+  padding: 0.5em;
+}
+
+#details-short {
+  border: 2px solid orange;
+  background-color: rgba(0,0,0,0.8);
+  color: white;
+  padding: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+</style>
+<script>
+function seeMod(m) {
+  var ul = $('<div/>')
+  jQuery.each(m.binds, function(ix,b) {
+    ul.append(seeBinds(b,true))
+  })
+
+  return $('<div/>')
+         .append($('<div/>').addClass('title').text(m.mod), ul)
+}
+
+
+function seeGlob(x) {
+  return $('<div/>')
+         .addClass('var')
+         .attr('title', x.module)
+         .text(x.name)
+}
+
+function seeVar(x) {
+  return seeBindVar(x)
+}
+
+function seeArg(a) {
+  return $('<tr/>')
+         .append( $('<td/>').text(a.strict)
+                , $('<td/>').text(a.use)
+                , $('<td/>').append( $('<div/>').addClass('arg').text(a.type)
+                                   , rarr() )
+                )
+}
+
+function seeDetails(info) {
+  var d = $('<table/>').addClass('details')
+  if (info.poly.length !== 0) {
+    var vars = $('<td/>').attr('colspan','3').append(kw('forall'))
+    jQuery.each(info.poly,function(ix,p) {
+      vars.append($('<div/>').addClass('arg').text(p))
+    })
+    vars.append(kw('.'))
+    d.append($('<tr/>').append(vars))
+  }
+
+  jQuery.each(info.args,function(ix,p) { d.append(seeArg(p)) })
+
+  d.append($('<tr>').append( $('<td/>').attr('colspan','2').text(info.term)
+                           , $('<td/>').text(info.result)
+                           ))
+
+  return d
+}
+
+
+function seeBindVar(x) {
+
+  var d = $('<div/>')
+         .addClass('var clickable')
+         .text(x.name)
+         .addClass(x.id)
+         .hover(entry,exit)
+
+  var infoBox = null
+
+  d.click(function() {
+    var c = 'active-long'
+    var nowOn = d.hasClass(c)
+    $('.' + c).removeClass(c)
+    if (!nowOn) {
+      findAll().addClass(c)
+      if (infoBox) $('#details-long').empty().append(infoBox.clone())
+    } else {
+      $('#details-long').empty()
+    }
+  })
+
+  if (x.info) {
+    d.addClass('arg')
+     .attr('id',x.id)
+    infoBox = seeDetails(x.info)
+  }
+
+
+  function findAll() {
+    var c = '.' + x.id
+    return $(c + ',div:has(' + c + ')+.dots')
+  }
+
+  function entry() {
+    if (infoBox) $('#details-short').append(infoBox)
+    findAll().addClass('active')
+  }
+  function exit () {
+    findAll().removeClass('active')
+    $('#details-short').empty()
+  }
+
+  return d
+}
+
+function kw(x) { return $('<div/>').addClass('kw').text(x) }
+function rarr() { return $('<div/>').addClass('kw').html('&rarr;') }
+function larr() { return $('<div/>').addClass('kw').html('&larr;') }
+function lam() { return $('<div/>').addClass('kw lam').html('&lambda;') }
+
+function switcher(sep,ex,open) {
+  var dots = $('<span/>').addClass('clickable dots').text('...')
+  dots.click(function() {
+    if (dots.hasClass('active-long'))
+      $('.active-long').removeClass('active-long')
+  })
+  sep.addClass('clickable')
+     .click(function() { ex.slideToggle(); dots.toggle() })
+
+  if (open) { dots.hide() } else { ex.hide() }
+  return dots
+}
+
+function seeBinds(b,atTop) {
+  var ul = $('<div/>').addClass('binds')
+
+
+  jQuery.each(b.binds, function(ix,b) {
+    var eq = kw('=')
+    var ex = nested(seeExpr(b.def))
+    var dots = switcher(eq,ex,atTop)
+    var scope = b.rec ? ul : eq
+    var bi = $('<div/>') .addClass('bind')
+    if (b.terms) bi.append(kw('(' + b.terms + ')'))
+    bi.append(seeBindVar(b.var), eq, ex, dots)
+    if (atTop) bi.addClass('top')
+    ul.append(bi)
+  })
+
+  var me = ul
+  if (b.rec) {
+    me = $('<div/>').append(kw('rec'), nested(ul))
+  }
+
+  return me
+}
+
+function nested(x) {
+  return $('<div/>').addClass('nested').append(x)
+}
+
+function seeExpr(e,p) {
+
+  switch(e.tag) {
+    case 'Var': return $('<div/>').addClass('small expr').append(seeVar(e.var))
+    case 'Glob': return $('<div/>').addClass('small expr').append(seeGlob(e.var))
+    case 'Lit': return $('<div/>').addClass('small expr').append(seeLit(e.lit))
+    case 'App':
+      var d = $('<div/>').addClass('app small expr')
+      d.append(seeExpr(e.fun))
+      jQuery.each(e.args, function(i,a) { d.append(seeExpr(a,true)
+                                           .addClass('app-arg')) })
+      if (p) d.addClass('paren')
+      return d
+
+    case 'Lam':
+      var d = $('<div/>')
+              .addClass('big expr')
+              .append( lam() )
+
+      var b = nested(seeExpr(e.body))
+
+      jQuery.each(e.args, function(ix,a) {
+                             d.append(seeBindVar(a))
+                  })
+
+      d.append(rarr(), b)
+
+      if (p) d.addClass('paren')
+      return d
+
+    case 'Let':
+      var d = $('<div/>')
+              .addClass('big expr')
+              .append(kw('let'),nested(seeBinds(e.defs))
+                     ,kw('in'),nested(seeExpr(e.body)))
+      if (p) d.addClass('paren')
+      return d
+
+    case 'Case':
+
+      // Special case for cases that just evaluate
+      if (e.alts.length === 1) {
+        var alt = e.alts[0]
+
+        var rhs = seeExpr(alt.rhs)
+
+        var d = $('<div/>')
+                .addClass('big expr')
+                .append(kw('let!'))
+
+        if (rhs.find('.' + e.val.id).length !== 0)
+          d.append(seeBindVar(e.val), kw('as'))
+
+        if (alt.con.tag !== 'DEFAULT') d.append(seeAltCon(alt.con))
+
+        jQuery.each(alt.binds,function(ix,b) {
+          var ms = rhs.find('.' + b.id)
+          if (ms.length === 0) b.name = '_'
+          d.append(seeBindVar(b))
+        })
+
+        d.append(kw('='), seeExpr(e.expr),kw('in'),$('<div/>').append(rhs))
+
+        return d
+      }
+
+      // Normal multi-way case
+      var b = $('<div/>').addClass('nested')
+      jQuery.each(e.alts,function(ix,alt) { b.append(seeAlt(alt)) })
+
+
+      var d = $('<div/>')
+              .addClass('big expr')
+              .append( kw('case'), seeExpr(e.expr) )
+
+     if (b.find('.' + e.val.id).length !== 0)
+       d.append(kw('as'), seeBindVar(e.val))
+
+      d.append(kw('of'), b)
+
+      if (p) d.addClass('paren')
+      return d
+
+    default: return seeExpr('Unknown expression')
+  }
+
+}
+
+function seeLit(l) { return $('<div/>').addClass('lit').text(l.lit) }
+
+function seeAlt(a) {
+  var d = $('<div/>')
+          .addClass('alt')
+          .append( seeAltCon(a.con) )
+  var rhs = nested(seeExpr(a.rhs))
+  jQuery.each(a.binds,function(i,b) {
+    var ms = rhs.find('.' + b.id)
+    if (ms.length === 0) b.name = '_'
+    d.append(seeBindVar(b))
+  })
+  var arr = rarr()
+  var dots = switcher(arr,rhs)
+  d.append(arr,rhs,dots)
+  return d
+}
+
+function seeAltCon(a) {
+  switch(a.tag) {
+    case 'DataAlt': return kw(a.con)
+    case 'LitAlt': return seeLit(a.lit)
+    case 'DEFAULT': return kw('DEFAULT')
+    default: return seeError('Unknown AltCon')
+  }
+}
+
+function seeError(a) {
+  return $('<div/>').addClass('error').text(a)
+}
+
+$(document).ready(function() {
+  var b = $('body')
+  b.append(seeMod(it))
+
+})
+</script>
+</head>
+<body>
+<div id="all-details">
+<div id="details-short"></div>
+<div id="details-long"></div>
+</div>
+</body>
+</html>
