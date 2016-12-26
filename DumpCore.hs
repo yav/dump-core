@@ -213,6 +213,12 @@ jsBinder v =
     , "args" .= zipWith jsArg args sArgs
     , "term" .= jsOut sRes
     , "result" .= jsOut (mkFunTys otherArgs rest)
+    , "usage" .= JS.object
+                   [ "demand"  .= jsOut (demandInfo info)
+                   , "occ"     .= jsOut (occInfo info)
+                   , "callAr"  .= callArityInfo info
+                   , "oneShot" .= jsOut (oneShotInfo info)
+                   ]
     ]
 
   where
