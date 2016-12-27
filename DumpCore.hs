@@ -65,14 +65,15 @@ cvtM gs = M (mg_module gs) (foldr jn [] bs)
   jn (TB False xs) (TB False ys : more) = TB False (xs ++ ys) : more
   jn x y                                = x : y
 
-  mkBind (NonRec x _) = do x' <- newBindVar LetBind x
-                           return [x']
-  mkBind (Rec xs)     = mapM (newBindVar LetBind . fst) xs
+  mkBV = BindVar 0 LetBind
 
-  act = do bs <- mapM mkBind (mg_binds gs)
-           withBindVars (concat bs) (mapM cvtTB (mg_binds gs))
+  mkBind (NonRec x _) = [mkBV x]
+  mkBind (Rec xs)     = map (mkBV . fst) xs
 
-  bs = case runStateT 0 (runReaderT Map.empty act) of
+  act = let bs = map mkBind (mg_binds gs)
+        in withBindVars (concat bs) (mapM cvtTB (mg_binds gs))
+
+  bs = case runStateT 1 (runReaderT Map.empty act) of
         Nothing    -> []
         Just (a,_) -> a
 
