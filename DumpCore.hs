@@ -263,8 +263,10 @@ instance ToJSON B where
     where js (x,e) = JS.object [ "var" .= x, "def" .= e ]
 
 instance ToJSON Var where
-  toJSON v = JS.object [ "name" .= varName v, "id" .= (x : '-' : show y)
+  toJSON v = JS.object [ "name" .= varName v
+                       , "id" .= (x : '-' : show y)
                        , "info" .= jsOut v
+                       , "module" .= nameModule_maybe (varName v)
                        ]
     where (x,y) = unpkUnique (varUnique v)
 
