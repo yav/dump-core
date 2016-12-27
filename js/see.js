@@ -114,7 +114,7 @@ function seeMod(m) {
 
     function opt(key,val,skipVal) {
       if (val == skipVal) return []
-      return [ $('<dt/>').text(key + ':'), $('<dd/>').text(val) ]
+      return [ $('<span/>').text(val) ]
     }
 
     var use = info.usage
@@ -134,6 +134,19 @@ function seeMod(m) {
 
     return d
   }
+
+
+  function seeGlob(x) {
+    return $('<div/>')
+           .addClass('var')
+           .attr('title', x.module)
+           .text(x.name)
+  }
+
+  function seeVar(x) { return seeBindVar(x) }
+
+
+
 
 
   /* ------------------------------------------------------------ */
@@ -169,26 +182,18 @@ function seeMod(m) {
 
   /* ------------------------------------------------------------ */
 
-
-
-
-  function seeGlob(x) {
-    return $('<div/>')
-           .addClass('var')
-           .attr('title', x.module)
-           .text(x.name)
-  }
-
-  function seeVar(x) { return seeBindVar(x) }
-
-
-
   function seeExpr(e,p) {
-  
+
     switch(e.tag) {
-      case 'Var': return $('<div/>').addClass('small expr').append(seeVar(e.var))
-      case 'Glob': return $('<div/>').addClass('small expr').append(seeGlob(e.var))
-      case 'Lit': return $('<div/>').addClass('small expr').append(seeLit(e.lit))
+      case 'Var': return $('<div/>').addClass('small expr')
+                         .append(seeVar(e.var))
+
+      case 'Glob': return $('<div/>').addClass('small expr')
+                          .append(seeGlob(e.var))
+
+      case 'Lit': return $('<div/>').addClass('small expr')
+                         .append(seeLit(e.lit))
+
       case 'App':
         var d = $('<div/>').addClass('app small expr')
         d.append(seeExpr(e.fun))
@@ -196,23 +201,21 @@ function seeMod(m) {
                                              .addClass('app-arg')) })
         if (p) d.addClass('paren')
         return d
-  
+
       case 'Lam':
         var d = $('<div/>')
                 .addClass('big expr')
                 .append( lam() )
-  
+
         var b = nested(seeExpr(e.body))
-  
-        jQuery.each(e.args, function(ix,a) {
-                               d.append(seeBindVar(a))
-                    })
-  
+
+        jQuery.each(e.args, function(ix,a) { d.append(seeBindVar(a)) })
+
         d.append(rarr(), b)
-  
+
         if (p) d.addClass('paren')
         return d
-  
+
       case 'Let':
         var d = $('<div/>')
                 .addClass('big expr')
@@ -220,59 +223,66 @@ function seeMod(m) {
                        ,kw('in'),nested(seeExpr(e.body)))
         if (p) d.addClass('paren')
         return d
-  
+
       case 'Case':
-  
+
         // Special case for cases that just evaluate
         if (e.alts.length === 1) {
           var alt = e.alts[0]
-  
+
           var rhs = seeExpr(alt.rhs)
-  
+
           var d = $('<div/>')
                   .addClass('big expr')
                   .append(kw('let!'))
-  
-          if (rhs.find('.' + e.val.id).length !== 0)
-            d.append(seeBindVar(e.val), kw('as'))
-  
+
+          if (rhs.find('.' + e.val.id).length !== 0) {
+            d.append(seeBindVar(e.val))
+            if (alt.con.tag !== 'DEFAULT') d.append(kw('as'))
+          }
+
           if (alt.con.tag !== 'DEFAULT') d.append(seeAltCon(alt.con))
-  
+
           jQuery.each(alt.binds,function(ix,b) {
             var ms = rhs.find('.' + b.id)
             if (ms.length === 0) b.name = '_'
             d.append(seeBindVar(b))
           })
-  
+
           d.append(kw('='), seeExpr(e.expr),kw('in'),$('<div/>').append(rhs))
-  
+
           return d
         }
-  
+
         // Normal multi-way case
         var b = $('<div/>').addClass('nested')
         jQuery.each(e.alts,function(ix,alt) { b.append(seeAlt(alt)) })
-  
-  
+
         var d = $('<div/>')
                 .addClass('big expr')
                 .append( kw('case'), seeExpr(e.expr) )
-  
+
        if (b.find('.' + e.val.id).length !== 0)
          d.append(kw('as'), seeBindVar(e.val))
-  
+
         d.append(kw('of'), b)
-  
+
         if (p) d.addClass('paren')
         return d
-  
-      default: return seeExpr('Unknown expression')
+
+
+      default: return seeError('Unknown expression')
     }
-  
+
   }
-  
-  function seeLit(l) { return $('<div/>').addClass('lit').text(l.lit) }
-  
+
+  function seeLit(l) {
+    return $('<div/>')
+           .addClass('lit')
+           .attr('title',l.type)
+           .text(l.lit)
+  }
+
   function seeAlt(a) {
     var d = $('<div/>')
             .addClass('alt')
@@ -288,7 +298,7 @@ function seeMod(m) {
     d.append(arr,rhs,dots)
     return d
   }
-  
+
   function seeAltCon(a) {
     switch(a.tag) {
       case 'DataAlt': return kw(a.con)
@@ -297,12 +307,10 @@ function seeMod(m) {
       default: return seeError('Unknown AltCon')
     }
   }
-  
+
   function seeError(a) {
     return $('<div/>').addClass('error').text(a)
   }
-  
-
 
 }
 
