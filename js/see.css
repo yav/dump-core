@@ -89,6 +89,7 @@ table.details td {
   border-left: 1px solid white;
   padding-left: 0.5em;
   padding-right: 0.5em;
+  white-space: nowrap;
 }
 
 
@@ -97,6 +98,7 @@ table.details td {
   position: fixed;
   right: 1em;
   top: 1em;
+  max-width: 50%;
 }
 
 #details-long {
@@ -104,6 +106,7 @@ table.details td {
   background-color: rgba(0,0,0,0.8);
   color: white;
   padding: 0.5em;
+  overflow: auto;
 }
 
 #details-short {
@@ -112,5 +115,6 @@ table.details td {
   color: white;
   padding: 0.5em;
   margin-bottom: 0.5em;
+  overflow: auto;
 }
 
