@@ -7,6 +7,16 @@ body {
 }
 
 
+a.var {
+  color: #339;
+  text-decoration: none;
+}
+
+a.var:hover {
+  text-decoration: underline;
+}
+
+
 .clickable {
   cursor: pointer;
 }

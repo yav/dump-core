@@ -374,7 +374,8 @@ instance ToJSON Literal where
     mk x s = JS.object [ "lit" .= s, "type" .= x ]
 
 instance ToJSON DataCon where
-  toJSON = toJSON . dataConName
+  toJSON x = JS.object [ "name" .= nm, "module" .= nameModule_maybe nm ]
+    where nm = dataConName x
 
 -------------------------------------------------------------------------------
 

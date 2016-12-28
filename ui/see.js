@@ -304,7 +304,8 @@ function seeMod(m) {
 
   function seeAltCon(a) {
     switch(a.tag) {
-      case 'DataAlt': return kw(a.con)
+      case 'DataAlt': return kw(a.con.name)
+                             .attr('title',a.con.module)
       case 'LitAlt': return seeLit(a.lit)
       case 'DEFAULT': return kw('DEFAULT')
       default: return seeError('Unknown AltCon')
