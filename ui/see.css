@@ -118,3 +118,10 @@ table.details td {
   overflow: auto;
 }
 
+@font-face {
+  font-family: 'Fira Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Fira Mono');
+}
+

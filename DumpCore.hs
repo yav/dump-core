@@ -19,6 +19,11 @@ import           Data.Maybe(mapMaybe)
 import           MonadLib
 import           Data.Map ( Map )
 import qualified Data.Map as Map
+import           Control.Monad(unless)
+import           System.FilePath
+import           System.Directory
+
+import Paths_dump_core
 
 plugin :: Plugin
 plugin = defaultPlugin { installCoreToDos = install }
@@ -31,12 +36,44 @@ install _ todo =
 pass ::  PluginPass
 pass guts =
   do df <- getDynFlags
-     let mod = cvtM guts
-         f   = moduleNameString (moduleName (mg_module guts)) ++ ".js"
-         js  = JS.encode mod
-     liftIO (BS.writeFile f ("var it = " `BS.append` js))
+     let mod        = cvtM guts
+         file       = moduleNameString (moduleName (mg_module guts))
+         htmlDir = "dump-core"
+
+     liftIO $
+       do createDirectoryIfMissing True htmlDir
+          installLibFiles htmlDir
+
+          let jsDir = htmlDir </> "js"
+          createDirectoryIfMissing True jsDir
+          let js_file = jsDir </> file <.> "js"
+          BS.writeFile js_file ("var it = " `BS.append` JS.encode mod)
+
+          -- The wrapper assumes `js` and `lib` as sub-directories of html
+          let html_file  = htmlDir </> file <.> "html"
+          BS8.writeFile html_file (htmlWrapper file)
+
      return guts
 
+
+installLibFiles :: FilePath -> IO ()
+installLibFiles libDir =
+  mapM_ (copyLibFile libDir) [ "ui/see.js"
+                             , "ui/see.css"
+                             , "ui/jquery.js"
+                             , "ui/fonts/FiraMono-Regular.ttf"
+                             , "ui/fonts/FiraMono-Bold.ttf" ]
+
+copyLibFile :: FilePath -> FilePath -> IO ()
+copyLibFile outDir file =
+  do path <- getDataFileName file
+     let outFile = outDir </> file
+     done <- doesFileExist outFile
+     unless done $ do createDirectoryIfMissing True (takeDirectory outFile)
+                      copyFile path outFile
+
+
+--------------------------------------------------------------------------------
 
 type CvtM = ReaderT (Map Var V) (StateT Int Maybe)
 
@@ -339,3 +376,29 @@ instance ToJSON Literal where
 instance ToJSON DataCon where
   toJSON = toJSON . dataConName
 
+-------------------------------------------------------------------------------
+
+htmlWrapper :: String -> BS8.ByteString
+htmlWrapper name = BS8.unlines
+  [ "<!DOCTYPE html>"
+  , "<html>"
+  , "<head>"
+  , "<script src=\"ui/jquery.js\"></script>"
+  , BS8.concat [ "<script src=\"js/", BS8.pack name, ".js\"></script>" ]
+  , "<script src=\"ui/see.js\"></script>"
+  , "<link href=\"ui/see.css\" rel=\"stylesheet\">"
+  , "<script>"
+  , "$(document).ready(function() {"
+  , "  var b = $('body')"
+  , "  b.append(seeMod(it))"
+  , "})"
+  , "</script>"
+  , "</head>"
+  , "<body>"
+  , "<div id=\"all-details\">"
+  , "<div id=\"details-short\"></div>"
+  , "<div id=\"details-long\"></div>"
+  , "</div>"
+  , "</body>"
+  , "</html>"
+  ]

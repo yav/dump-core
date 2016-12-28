@@ -15,7 +15,9 @@ function seeMod(m) {
 
     jQuery.each(b.binds, function(ix,b) {
       var bind = $('<div/>').addClass('bind')
-      if (atTop) bind.addClass('top')
+      if (atTop) {
+        bind.addClass('top').append($('<a/>').attr('name',b.var.id))
+      }
 
       if (b.terms) bind.append(kw('(' + b.terms + ')'))
       bind.append(seeBindVar(b.var))
@@ -137,9 +139,10 @@ function seeMod(m) {
 
 
   function seeGlob(x) {
-    return $('<div/>')
+    return $('<a/>')
            .addClass('var')
            .attr('title', x.module)
+           .attr('href', x.module + '.html#' + x.id)
            .text(x.name)
   }
 
