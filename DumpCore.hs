@@ -29,29 +29,29 @@ plugin :: Plugin
 plugin = defaultPlugin { installCoreToDos = install }
 
 install :: [CommandLineOption] -> [CoreToDo] -> CoreM [CoreToDo]
-install _ todo =
+install opts todo =
   do reinitializeGlobals
-     return (todo ++ [ CoreDoPluginPass "DumpCore" pass ])
+     return (todo ++ [ CoreDoPluginPass "DumpCore" (liftIO . dumpIn opts) ])
 
-pass ::  PluginPass
-pass guts =
-  do df <- getDynFlags
-     let mod        = cvtM guts
+dumpIn :: [CommandLineOption] -> ModGuts -> IO ModGuts
+dumpIn opts guts =
+  do let mod        = cvtM guts
          file       = moduleNameString (moduleName (mg_module guts))
-         htmlDir = "dump-core"
+         htmlDir    = case opts of
+                        []    -> "dump-core"
+                        x : _ -> x
 
-     liftIO $
-       do createDirectoryIfMissing True htmlDir
-          installLibFiles htmlDir
+     installLibFiles htmlDir
 
-          let jsDir = htmlDir </> "js"
-          createDirectoryIfMissing True jsDir
-          let js_file = jsDir </> file <.> "js"
-          BS.writeFile js_file ("var it = " `BS.append` JS.encode mod)
+     let jsDir = htmlDir </> "js"
+     createDirectoryIfMissing True jsDir
 
-          -- The wrapper assumes `js` and `lib` as sub-directories of html
-          let html_file  = htmlDir </> file <.> "html"
-          BS8.writeFile html_file (htmlWrapper file)
+     let js_file = jsDir </> file <.> "js"
+     BS.writeFile js_file ("var it = " `BS.append` JS.encode mod)
+
+     -- The wrapper assumes `js` and `lib` as sub-directories of html
+     let html_file  = htmlDir </> file <.> "html"
+     BS8.writeFile html_file (htmlWrapper file)
 
      return guts
 
