@@ -1,5 +1,5 @@
 # Revision history for dump-core
 
-## 0.1.0.0  -- YYYY-mm-dd
+## 0.1.3.0
 
 * First version. Released on an unsuspecting world.
