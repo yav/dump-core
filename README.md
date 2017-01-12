@@ -40,7 +40,8 @@ manually.
 You may also expand and collapse (some of the) definitions to make things more
 manageable.
 
+Here a sample of the output for a single module:
 
-
+http://yav.github.io/dump-core/example-output/Galua.OpcodeInterpreter.html
 
 
