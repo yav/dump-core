@@ -19,5 +19,28 @@ Then, you can add something like this to your library or executable section:
 The option to the plugin specifies the directory where files should be saved---
 in this example, it is set to `core-html`.  The default is `dump-core`.
 
+After compilation, directory `dump-core` (or whatever was specified in the
+options) will contain HTML files that you can open with a web browser.
+I've only tried Chrome but most browsers ought to work.  Please
+let me know if you encounter problems.
+
+While browsing, you can hover over variables to get information about them:
+hovering over a use site of a variable will highlight all other uses of it,
+as well as its binder.  Hovering over a binder will give information about
+the type of the variable, as well as some of the information GHC inferred,
+such as strictness, uses, etc.  You may also click on a binder to "hold on"
+to its information---the information won't disappear when you move the mouse.
+Click again to "let go" of the binder.
+
+Hovering over identifiers from other modules will show you where they are
+defined.  You may click on them to go to that module (if you have the HTML
+for it), although---due to a bug---you'll have to scroll to the definition
+manually.
+
+You may also expand and collapse (some of the) definitions to make things more
+manageable.
+
+
+
 
 
