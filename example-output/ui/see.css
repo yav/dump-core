@@ -1,0 +1,137 @@
+body {
+  font-family: 'Fira Mono', monospace;
+}
+
+.dots {
+  display: inline-block;
+}
+
+
+a.var {
+  color: #339;
+  text-decoration: none;
+}
+
+a.var:hover {
+  text-decoration: underline;
+}
+
+
+.clickable {
+  cursor: pointer;
+}
+
+
+.active { background-color: orange; }
+.active-long { background-color: green; }
+
+.var {
+  display: inline-block;
+}
+
+.top.bind {
+  margin-bottom: 2em;
+}
+
+
+.app {
+  vertical-align: top;
+}
+
+.title {
+  font-size: large;
+  font-weight: bold;
+}
+
+.nested { padding-left: 1em; }
+
+
+
+.paren {
+  border: 1px solid black !important;
+  padding: 3px;
+}
+
+.arg {
+  display: inline-block;
+  margin-right: 0.5em;
+  white-space: nowrap;
+}
+
+.app-arg {
+  margin-left: 0.2em;
+}
+
+
+.lit {
+  color: purple;
+  display: inline-block;
+}
+
+.kw.lam {
+  margin-right: 0.1em;
+}
+
+.kw {
+  display: inline-block;
+  font-weight: bold;
+  margin-right: 0.5em;
+}
+
+.expr:hover {
+  border-left: 1px solid black;
+}
+
+.expr {
+  border-left: 1px solid transparent;
+  margin-right: 0.5em;
+}
+
+.small.expr {
+  display: inline-block;
+}
+
+table.details {
+  border-collapse: collapse;
+}
+
+table.details td {
+  border-left: 1px solid white;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  white-space: nowrap;
+}
+
+
+#all-details {
+  z-index: 5;
+  position: fixed;
+  right: 1em;
+  top: 1em;
+  max-width: 50%;
+}
+
+#details-long {
+  border: 2px solid green;
+  background-color: rgba(0,0,0,0.8);
+  color: white;
+  padding: 0.5em;
+  overflow: auto;
+}
+
+#details-short {
+  border: 2px solid orange;
+  background-color: rgba(0,0,0,0.8);
+  color: white;
+  padding: 0.5em;
+  margin-bottom: 0.5em;
+  overflow: auto;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Fira Mono');
+}
+
