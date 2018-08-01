@@ -26,7 +26,7 @@ data-files:          ui/see.js,
 library
   exposed-modules:     DumpCore
   other-modules:       Paths_dump_core
-  build-depends:       base >=4.9 && <4.11, ghc, text, aeson, bytestring,
+  build-depends:       base >=4.9 && <4.12, ghc, text, aeson, bytestring,
                        containers, monadLib, directory, filepath
   default-language:    Haskell2010
 
