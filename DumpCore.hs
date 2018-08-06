@@ -31,8 +31,7 @@ plugin = defaultPlugin { installCoreToDos = install }
 
 install :: [CommandLineOption] -> [CoreToDo] -> CoreM [CoreToDo]
 install opts todo =
-  do reinitializeGlobals
-     return (todo ++ [ CoreDoPluginPass "DumpCore" (liftIO . dumpIn opts) ])
+  return (todo ++ [ CoreDoPluginPass "DumpCore" (liftIO . dumpIn opts) ])
 
 dumpIn :: [CommandLineOption] -> ModGuts -> IO ModGuts
 dumpIn opts guts =
