@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
 module DumpCore(plugin) where
 
 import GhcPlugins hiding (TB)
@@ -360,14 +361,24 @@ instance ToJSON Literal where
       MachChar c -> mk "char" (show c)
       MachStr bs -> mk "string" (show bs)
       MachNullAddr -> mk "null" ""
+#if __GLASGOW_HASKELL__ < 806
       MachInt i -> mk "int" (show i)
       MachInt64 i -> mk "int64" (show i)
       MachWord i -> mk "word" (show i)
       MachWord64 i -> mk "word64" (show i)
+      LitInteger i _t -> mk "integer" (show i)
+#else
+      LitNumber num_type i _t ->
+        case num_type of
+          LitNumInteger -> mk "integer" (show i)
+          LitNumNatural -> mk "natural" (show i)
+          LitNumInt -> mk "int" (show i)
+          LitNumInt64 -> mk "int64" (show i)
+          LitNumWord -> mk "word" (show i)
+#endif
       MachFloat r -> mk "float" (show r)
       MachDouble r -> mk "double" (show r)
       MachLabel fs _ _ -> mk "label" (show fs)
-      LitInteger i _t -> mk "integer" (show i)
 
     where
     mk :: Text -> String -> JS.Value
