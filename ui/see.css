@@ -50,6 +50,7 @@ a.var:hover {
 .paren {
   border: 1px solid black !important;
   padding: 3px;
+  vertical-align: middle;
 }
 
 .arg {
@@ -79,12 +80,13 @@ a.var:hover {
 }
 
 .expr:hover {
-  border-left: 1px solid black;
+  border-left: 1px dashed #999;
 }
 
 .expr {
   border-left: 1px solid transparent;
   margin-right: 0.5em;
+  vertical-align: middle;
 }
 
 .small.expr {
