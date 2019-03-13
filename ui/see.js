@@ -40,9 +40,11 @@ function seeMod(m) {
 
     var d = $('<div/>')
            .addClass('var clickable')
-           .text(x.name)
            .addClass(x.id)
            .hover(entry,exit)
+
+    if (x.join) { d.append(kw('join '), $('<span/>').text(x.name)) }
+    else d.text(x.name)
 
     var infoBox = null
 

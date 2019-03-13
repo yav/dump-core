@@ -336,10 +336,12 @@ instance ToJSON V where
 
 instance ToJSON BindVar where
    toJSON (BindVar i s v t) =
-    JS.object [ "name" .= t
+    JS.object (j ++
+              [ "name" .= t
               , "id" .= mkId i v
               , "info" .= if isId v then jsBinder v else JS.Null
-              ]
+              ])
+    where j = if isJoinId v then [ "join" .= True ] else []
 
 mkId :: Int -> Var -> String
 mkId i v = x : '-' : show i ++ ['-'] ++ show y
