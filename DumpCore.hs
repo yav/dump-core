@@ -7,6 +7,8 @@ import Unique(unpkUnique)
 import Demand
 import Outputable
 import CoreStats
+import CoreMonad(getHscEnv)
+import HscTypes(CgGuts(..))
 
 
 import qualified Data.Aeson as JS
@@ -75,8 +77,12 @@ copyLibFile outDir file =
 
 --------------------------------------------------------------------------------
 
-type CvtM = ReaderT (Map Var V) (StateT Int Maybe)
+type CvtM = ReaderT RO (StateT Int Maybe)
 
+data RO = RO
+  { roVars :: Map Var V    -- ^ Mapping from GHC vars to V
+  , roTxt  :: Map Text Int -- ^ how many times is this string in scope
+  }
 
 
 data M = M Module [TB]
@@ -89,8 +95,8 @@ data E = EVar V
        | ELet B E
        | ECase E BindVar [A]
 
-data V       = V Int Var
-data BindVar = BindVar Int BindingSite Var
+data V       = V Int Var Text
+data BindVar = BindVar Int BindingSite Var Text
 
 data A  = A AltCon [BindVar] E
 data B  = B Bool [(BindVar,E)]
@@ -102,32 +108,48 @@ cvtM gs = M (mg_module gs) (foldr jn [] bs)
   jn (TB False xs) (TB False ys : more) = TB False (xs ++ ys) : more
   jn x y                                = x : y
 
-  mkBV = BindVar 0 LetBind
+  mkBV x = BindVar 0 LetBind x (txtName x)
 
   mkBind (NonRec x _) = [mkBV x]
   mkBind (Rec xs)     = map (mkBV . fst) xs
 
   act = let bs = map mkBind (mg_binds gs)
-        in withBindVars (concat bs) (mapM cvtTB (mg_binds gs))
+        in withBindVars (concat bs) $ \_ -> mapM cvtTB (mg_binds gs)
 
-  bs = case runStateT 1 (runReaderT Map.empty act) of
-        Nothing    -> []
-        Just (a,_) -> a
+  ro0 = RO { roVars = Map.empty, roTxt = Map.empty }
+  bs  = case runStateT 1 (runReaderT ro0 act) of
+               Nothing    -> []
+               Just (a,_) -> a
+
+txtName :: Var -> Text
+txtName = Text.pack . occNameString . nameOccName . varName
 
 
 
 newBindVar :: BindingSite -> Var -> CvtM BindVar
 newBindVar bs v =
-  do i <- sets $ \i -> (i, i + 1)
-     return (BindVar i bs v)
+  do i <- sets $ \i -> (i,i+1)
+     return (BindVar i bs v "")
 
-withBindVar :: BindVar -> CvtM a -> CvtM a
-withBindVar b@(BindVar i _ v) m =
+withBindVar :: BindVar -> (BindVar -> CvtM a) -> CvtM a
+withBindVar b@(BindVar i s v _) m =
   do scope <- ask
-     local (Map.insert v (V i v) scope) m
+     let txt = txtName v
+         nm = case mp Map.! txt of
+                1 -> txt
+                n -> txt `Text.append` Text.pack ("_" ++ show n)
+         mp = Map.insertWith (+) txt 1 (roTxt scope)
+         ro = RO { roVars = Map.insert v (V i v nm) (roVars scope)
+                 , roTxt  = mp
+                 }
+     local ro (m (BindVar i s v nm))
 
-withBindVars :: [BindVar] -> CvtM a -> CvtM a
-withBindVars bs m = foldr withBindVar m bs
+withBindVars :: [BindVar] -> ([BindVar] -> CvtM a) -> CvtM a
+withBindVars bs m =
+  case bs of
+    []     -> m []
+    x : xs -> withBindVar  x  $ \x1 ->
+              withBindVars xs $ \xs1 -> m (x1:xs1)
 
 
 cvtE :: CoreExpr -> CvtM E
@@ -136,7 +158,7 @@ cvtE expr =
 
     Var x ->
       do scope <- ask
-         case Map.lookup x scope of
+         case Map.lookup x (roVars scope) of
            Nothing -> return (EGlob x)
            Just v  -> return (EVar v)
 
@@ -148,26 +170,27 @@ cvtE expr =
       | isTyVar x -> cvtE e
       | otherwise ->
         do b <- newBindVar LambdaBind x
-           withBindVar b $
+           withBindVar b $ \b1 ->
              do e' <- cvtE e
                 case e' of
-                  ELam xs e'' -> return (ELam (b:xs) e'')
-                  _ -> return (ELam [b] e')
+                  ELam xs e'' -> return (ELam (b1:xs) e'')
+                  _ -> return (ELam [b1] e')
 
     Let b e ->
       do B isRec defs <- cvtB b
-         withBindVars (map fst defs) $
-            do e' <- cvtE e
+         withBindVars (map fst defs) $ \defs1 ->
+            do let newDefs = zip defs1 (map snd defs)
+               e' <- cvtE e
                case e' of
                  ELet (B False moreDefs) e'' | not isRec ->
-                    return (ELet (B False (defs ++ moreDefs)) e'')
-                 _ -> return (ELet (B isRec defs) e')
+                    return (ELet (B False (newDefs ++ moreDefs)) e'')
+                 _ -> return (ELet (B isRec newDefs) e')
 
     Case e x _ as ->
       do e'  <- cvtE e
          x'  <- newBindVar CaseBind x
-         as' <- withBindVar x' (mapM cvtA as)
-         return (ECase e' x' as')
+         withBindVar x' $ \x1 -> do as' <- mapM cvtA as
+                                    return (ECase e' x1 as')
 
     Cast x _    -> cvtE x
 
@@ -194,10 +217,10 @@ cvtTB b =
     Rec cs     -> do bs' <- mapM cvtSE cs
                      return (TB True bs')
   where
-  cvtSE (x,e) = do mp <- ask
-                   let V i v = mp Map.! x
+  cvtSE (x,e) = do scope <- ask
+                   let V i v t = roVars scope Map.! x
                    e' <- cvtE e
-                   return (BindVar i LetBind v, exprStats e, e')
+                   return (BindVar i LetBind v t, exprStats e, e')
 
 cvtB :: CoreBind -> CvtM B
 cvtB bnd =
@@ -207,16 +230,16 @@ cvtB bnd =
                      return (B False [(x',e')])
     Rec xs ->
       do bs <- mapM (newBindVar LetBind) (map fst xs)
-         withBindVars bs $
+         withBindVars bs $ \bs1 ->
            do es' <- mapM (cvtE . snd) xs
-              return (B True (zip bs es'))
+              return (B True (zip bs1 es'))
 
 
 cvtA :: CoreAlt -> CvtM A
 cvtA (con,bs,e) =
   do xs <- mapM (newBindVar CaseBind) bs
-     withBindVars xs $ do e' <- cvtE e
-                          return (A con xs e')
+     withBindVars xs $ \xs1 -> do e' <- cvtE e
+                                  return (A con xs1 e')
 
 cvtApp :: CoreExpr -> [E] -> CvtM E
 cvtApp (App x y) rest =
@@ -309,15 +332,14 @@ instance ToJSON Var where
     where (x,y) = unpkUnique (varUnique v)
 
 instance ToJSON V where
-  toJSON (V i v) = JS.object [ "name" .= varName v, "id" .= mkId i v ]
+  toJSON (V i v t) = JS.object [ "name" .= t, "id" .= mkId i v ]
 
 instance ToJSON BindVar where
-   toJSON (BindVar i s v) =
-    JS.object [ "name" .= varName v
+   toJSON (BindVar i s v t) =
+    JS.object [ "name" .= t
               , "id" .= mkId i v
               , "info" .= if isId v then jsBinder v else JS.Null
               ]
-
 
 mkId :: Int -> Var -> String
 mkId i v = x : '-' : show i ++ ['-'] ++ show y

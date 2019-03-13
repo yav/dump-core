@@ -102,6 +102,15 @@ table.details td {
   white-space: nowrap;
 }
 
+table.details th {
+  border-left: 1px solid white;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  white-space: nowrap;
+}
+
+
+
 
 #all-details {
   z-index: 5;
