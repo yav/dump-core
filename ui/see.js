@@ -87,12 +87,6 @@ function seeMod(m) {
   function seeDetails(info) {
     var d = $('<table/>').addClass('details')
 
-    d.append($('<tr/>')
-             .append ( $('<th/>').text('strict')
-                     , $('<th/>').text('use')
-                     , $('<th/>').text('type')
-                     ))
-
     if (info.poly.length !== 0) {
       var vars = $('<td/>').attr('colspan','3').append(kw('forall'))
       jQuery.each(info.poly,function(ix,p) {
@@ -101,6 +95,13 @@ function seeMod(m) {
       vars.append(kw('.'))
       d.append($('<tr/>').append(vars))
     }
+
+    d.append($('<tr/>')
+             .append ( $('<th/>').text('strict')
+                     , $('<th/>').text('use')
+                     , $('<th/>').text('type')
+                     ))
+
 
     jQuery.each(info.args,function(ix,p) {
       d.append
