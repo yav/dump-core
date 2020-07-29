@@ -273,7 +273,12 @@ jsBinder v =
     [ "poly" .= map jsOut qVars
     , "args" .= zipWith jsArg args sArgs
     , "term" .= jsOut sRes
-    , "result" .= jsOut (mkFunTys otherArgs rest)
+    , "result" .= jsOut
+#if __GLASGOW_HASKELL__ < 810
+        (mkFunTys otherArgs rest)
+#else
+        (mkVisFunTys otherArgs rest)
+#endif
     , "usage" .= JS.object
                    [ "demand"  .= jsOut (demandInfo info)
                    , "occ"     .= jsOut (occInfo info)
@@ -381,9 +386,22 @@ instance ToJSON AltCon where
 instance ToJSON Literal where
   toJSON lit =
     case lit of
+#if __GLASGOW_HASKELL__ < 810
       MachChar c -> mk "char" (show c)
       MachStr bs -> mk "string" (show bs)
       MachNullAddr -> mk "null" ""
+      MachFloat r -> mk "float" (show r)
+      MachDouble r -> mk "double" (show r)
+      MachLabel fs _ _ -> mk "label" (show fs)
+#else
+      LitChar c -> mk "char" (show c)
+      LitString bs -> mk "string" (show bs)
+      LitNullAddr -> mk "null" ""
+      LitRubbish -> mk "rubbish" ""
+      LitFloat r -> mk "float" (show r)
+      LitDouble r -> mk "double" (show r)
+      LitLabel fs _ _ -> mk "label" (show fs)
+#endif
 #if __GLASGOW_HASKELL__ < 806
       MachInt i -> mk "int" (show i)
       MachInt64 i -> mk "int64" (show i)
@@ -399,9 +417,6 @@ instance ToJSON Literal where
           LitNumInt64 -> mk "int64" (show i)
           LitNumWord -> mk "word" (show i)
 #endif
-      MachFloat r -> mk "float" (show r)
-      MachDouble r -> mk "double" (show r)
-      MachLabel fs _ _ -> mk "label" (show fs)
 
     where
     mk :: Text -> String -> JS.Value
