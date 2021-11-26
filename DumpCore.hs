@@ -386,7 +386,7 @@ instance ToJSON AltCon where
 instance ToJSON Literal where
   toJSON lit =
     case lit of
-#if !MIN_VERSION_ghc(8,10,0)
+#if !MIN_VERSION_ghc(8,8,0)
       MachChar c -> mk "char" (show c)
       MachStr bs -> mk "string" (show bs)
       MachNullAddr -> mk "null" ""
