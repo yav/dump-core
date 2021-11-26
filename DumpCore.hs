@@ -274,7 +274,7 @@ jsBinder v =
     , "args" .= zipWith jsArg args sArgs
     , "term" .= jsOut sRes
     , "result" .= jsOut
-#if __GLASGOW_HASKELL__ < 810
+#if !MIN_VERSION_ghc(8,10,0)
         (mkFunTys otherArgs rest)
 #else
         (mkVisFunTys otherArgs rest)
@@ -386,7 +386,7 @@ instance ToJSON AltCon where
 instance ToJSON Literal where
   toJSON lit =
     case lit of
-#if __GLASGOW_HASKELL__ < 810
+#if !MIN_VERSION_ghc(8,10,0)
       MachChar c -> mk "char" (show c)
       MachStr bs -> mk "string" (show bs)
       MachNullAddr -> mk "null" ""
@@ -402,7 +402,7 @@ instance ToJSON Literal where
       LitDouble r -> mk "double" (show r)
       LitLabel fs _ _ -> mk "label" (show fs)
 #endif
-#if __GLASGOW_HASKELL__ < 806
+#if !MIN_VERSION_ghc(8,6,0)
       MachInt i -> mk "int" (show i)
       MachInt64 i -> mk "int64" (show i)
       MachWord i -> mk "word" (show i)
